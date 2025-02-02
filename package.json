@@ -1,0 +1,26 @@
+{
+    "name": "think-protocol-plugin",
+    "version": "0.0.1",
+    "description": "THINK Protocol plugin for ElizaOS",
+    "main": "dist/index.js",
+    "module": "dist/index.mjs",
+    "types": "dist/index.d.ts",
+    "scripts": {
+      "build": "tsup",
+      "test": "jest",
+      "lint": "eslint --ext .ts,.js src"
+    },
+    "dependencies": {
+      "@elizaos/core": "latest"
+    },
+    "devDependencies": {
+      "@types/jest": "latest",
+      "@typescript-eslint/eslint-plugin": "latest",
+      "@typescript-eslint/parser": "latest",
+      "eslint": "latest",
+      "jest": "latest",
+      "ts-jest": "latest",
+      "tsup": "latest",
+      "typescript": "latest"
+    }
+  }
