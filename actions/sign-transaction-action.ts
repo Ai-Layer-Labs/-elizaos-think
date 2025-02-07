@@ -10,9 +10,9 @@ import {
     ModelClass,
     State,
     type Action,
+    ServiceType,
 } from "@elizaos/core";
 import { ethers } from "ethers";
-import { Wallet } from "ethereum-wallet";
 
 interface TransactionContent extends Content {
     walletAddress: string;
@@ -76,7 +76,7 @@ export default {
     handler: async (
         runtime: IAgentRuntime,
         message: Memory,
-        state: State,
+        state: State | undefined,
         options: { [key: string]: unknown },
         callback?: HandlerCallback
     ): Promise<boolean> => {
@@ -125,11 +125,14 @@ export default {
 
             // Store signed transaction in memory
             const memoryManager = runtime.getMemoryManager("transactions");
+            if (!memoryManager) {
+                throw new Error("Memory manager not available");
+            }
             const txHash = ethers.utils.keccak256(signedTx);
             
             await memoryManager.createMemory({
                 id: txHash,
-                content: JSON.stringify({
+                content: {
                     from: content.walletAddress,
                     to: content.to,
                     value: content.value,
@@ -139,7 +142,7 @@ export default {
                     maxPriorityFeePerGas: tx.maxPriorityFeePerGas?.toString(),
                     data: content.data,
                     metadata: content.metadata
-                }),
+                },
                 roomId: message.roomId,
                 userId: runtime.agentId,
                 timestamp: Date.now(),
@@ -271,27 +274,39 @@ async function generateTransactionContent(
 
 async function loadWallet(runtime: IAgentRuntime, address: string) {
     // Try vault first
-    const vaultService = runtime.getService("vault");
+    const vaultService = runtime.getService(ServiceType.VAULT);
     if (vaultService) {
-        const walletData = await vaultService.getSecrets(`wallet_${address}`);
-        if (walletData?.privateKey) {
-            return {
-                address: address,
-                privateKey: walletData.privateKey
-            };
+        try {
+            const walletData = await vaultService.get(`wallet_${address}`);
+            if (walletData?.privateKey) {
+                return {
+                    address: address,
+                    privateKey: walletData.privateKey
+                };
+            }
+        } catch (error) {
+            elizaLogger.error("Error accessing vault:", error);
         }
     }
 
     // Try memory system
     const memoryManager = runtime.getMemoryManager("wallets");
+    if (!memoryManager) {
+        throw new Error("Memory manager not available");
+    }
+    
     const wallets = await memoryManager.getMemories({
-        type: "wallet",
+        roomId: `wallet-${address}`,
         count: 1,
         metadata: { address }
     });
 
-    if (wallets.length > 0) {
-        return JSON.parse(wallets[0].content);
+    if (wallets.length > 0 && wallets[0].content) {
+        // Ensure content is properly typed
+        const walletContent = typeof wallets[0].content === 'string' 
+            ? JSON.parse(wallets[0].content)
+            : wallets[0].content;
+        return walletContent;
     }
 
     return null;

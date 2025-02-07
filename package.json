@@ -11,7 +11,8 @@
       "lint": "eslint --ext .ts,.js src"
     },
     "dependencies": {
-      "@elizaos/core": "latest"
+      "@elizaos/core": "latest",
+      "ethers": "^5.7.2"
     },
     "devDependencies": {
       "@types/jest": "latest",
