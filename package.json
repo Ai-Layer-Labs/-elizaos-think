@@ -1,0 +1,96 @@
+{
+  "name": "@elizaos/plugin-think",
+  "version": "1.0.0",
+  "description": "THINK Protocol integration for ElizaOS",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "test": "jest"
+  },
+  "keywords": [
+    "elizaos",
+    "plugin",
+    "think",
+    "blockchain",
+    "nft",
+    "ai"
+  ],
+  "agentConfig": {
+    "pluginType": "elizaos:plugin:1.0.0",
+    "pluginParameters": {
+      "THINK_AGENT_STARTSEED_ADDRESS": {
+        "type": "string",
+        "description": "Address of the ThinkAgentStartSeed contract"
+      },
+      "THINK_AGENT_COMM_ADDRESS": {
+        "type": "string",
+        "description": "Address of the ThinkAgentComm contract"
+      },
+      "THINK_AGENT_ESCROW_ADDRESS": {
+        "type": "string",
+        "description": "Address of the ThinkAgentEscrow contract"
+      },
+      "THINK_PROVIDER_PRIVATE_KEY": {
+        "type": "string",
+        "description": "Private key of the agent provider (optional)"
+      },
+      "RPC_URL": {
+        "type": "string",
+        "description": "Ethereum RPC URL"
+      },
+      "CHAIN_ID": {
+        "type": "string",
+        "description": "Ethereum chain ID"
+      },
+      "AUTH_MODE": {
+        "type": "string",
+        "description": "Authentication mode ('private_key' or 'jwt')",
+        "default": "private_key"
+      },
+      "JWT_AUTH_URL": {
+        "type": "string",
+        "description": "URL of the JWT authentication service (required for jwt auth mode)"
+      },
+      "JWT_CLIENT_ID": {
+        "type": "string",
+        "description": "Client ID for JWT authentication (required for jwt auth mode)"
+      },
+      "JWT_CLIENT_SECRET": {
+        "type": "string",
+        "description": "Client secret for JWT authentication (optional for jwt auth mode)"
+      },
+      "JWT_USERNAME": {
+        "type": "string",
+        "description": "Username for JWT password grant (optional for jwt auth mode)"
+      },
+      "JWT_PASSWORD": {
+        "type": "string",
+        "description": "Password for JWT password grant (optional for jwt auth mode)"
+      },
+      "JWT_REFRESH_TOKEN": {
+        "type": "string",
+        "description": "Refresh token for JWT authentication (optional for jwt auth mode)"
+      },
+      "RELAYER_URL": {
+        "type": "string",
+        "description": "URL of the transaction relayer service (required for jwt auth mode)"
+      }
+    }
+  },
+  "author": "THINK Protocol",
+  "license": "MIT",
+  "dependencies": {
+    "ethers": "^6.8.0",
+    "axios": "^1.5.0",
+    "zod": "^3.22.2"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.4",
+    "@types/node": "^20.6.0",
+    "jest": "^29.6.4",
+    "ts-jest": "^29.1.1",
+    "typescript": "^5.2.2"
+  }
+} 
