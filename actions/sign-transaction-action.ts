@@ -12,7 +12,8 @@ import {
     type Action,
     ServiceType,
 } from "@elizaos/core";
-import { ethers } from "ethers";
+// Import ethers only when needed using dynamic import to avoid circular dependencies
+// The ethers import will be performed inside functions that need it
 
 interface TransactionContent extends Content {
     walletAddress: string;
@@ -66,6 +67,7 @@ Given the recent messages, extract the following information about the transacti
 - Gas parameters (if specified)
 - Optional metadata (purpose, network, urgency)`;
 
+// Define action before loading additional dependencies
 export default {
     name: "SIGN_TRANSACTION",
     similes: ["PREPARE_TRANSACTION", "SIGN_TX", "CREATE_TRANSACTION"],
@@ -83,6 +85,9 @@ export default {
         elizaLogger.log("Starting SIGN_TRANSACTION handler...");
 
         try {
+            // Dynamically import ethers to avoid circular dependencies
+            const { ethers } = await import('ethers');
+            
             // Generate transaction content
             const content = await generateTransactionContent(runtime, message, state);
             if (!isTransactionContent(content)) {
@@ -108,7 +113,7 @@ export default {
             ]);
 
             // Prepare transaction
-            const tx = await prepareTransaction(content, nonce, feeData);
+            const tx = await prepareTransaction(ethers, content, nonce, feeData);
 
             // Check balance for transaction
             const balance = await provider.getBalance(content.walletAddress);
@@ -252,7 +257,7 @@ export default {
 async function generateTransactionContent(
     runtime: IAgentRuntime,
     message: Memory,
-    state: State
+    state?: State
 ): Promise<TransactionContent> {
     if (!state) {
         state = await runtime.composeState(message);
@@ -273,6 +278,15 @@ async function generateTransactionContent(
 }
 
 async function loadWallet(runtime: IAgentRuntime, address: string) {
+    // Dynamically import ethers if needed for wallet validation
+    let ethersInstance;
+    try {
+        const { ethers } = await import('ethers');
+        ethersInstance = ethers;
+    } catch (error) {
+        elizaLogger.warn("Could not import ethers library:", error);
+    }
+
     // Try vault first
     const vaultService = runtime.getService(ServiceType.VAULT);
     if (vaultService) {
@@ -313,11 +327,12 @@ async function loadWallet(runtime: IAgentRuntime, address: string) {
 }
 
 async function prepareTransaction(
+    ethers: any,
     content: TransactionContent,
     nonce: number,
     feeData: any
-): Promise<ethers.utils.UnsignedTransaction> {
-    const tx: ethers.utils.UnsignedTransaction = {
+): Promise<any> { // Using any to avoid ethers type references
+    const tx: any = {
         to: content.to,
         nonce: content.nonce ?? nonce,
         gasLimit: ethers.BigNumber.from(content.gasLimit || '21000'),

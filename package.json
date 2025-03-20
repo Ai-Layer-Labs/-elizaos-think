@@ -7,6 +7,7 @@
     "types": "dist/index.d.ts",
     "scripts": {
       "build": "tsup",
+      "dev": "tsup --watch",
       "test": "jest",
       "lint": "eslint --ext .ts,.js src"
     },
@@ -14,8 +15,12 @@
       "@elizaos/core": "latest",
       "ethers": "^5.7.2"
     },
+    "peerDependencies": {
+      "@elizaos/core": "latest"
+    },
     "devDependencies": {
       "@types/jest": "latest",
+      "@types/node": "latest",
       "@typescript-eslint/eslint-plugin": "latest",
       "@typescript-eslint/parser": "latest",
       "eslint": "latest",
@@ -23,5 +28,8 @@
       "ts-jest": "latest",
       "tsup": "latest",
       "typescript": "latest"
+    },
+    "engines": {
+      "node": ">=16.0.0"
     }
   }
