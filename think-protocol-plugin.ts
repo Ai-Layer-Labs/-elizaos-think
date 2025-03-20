@@ -15,6 +15,11 @@ export interface ThinkProtocolPluginConfig {
   contractAddress: string; // Address of the on-chain memory contract (e.g., agent NFT contract)
   rpcUrl: string;
   mcpIndexUrl?: string; // URL for the MCP index service (defaults to iod.ai)
+  // Agent Wallet options
+  agentWallet?: {
+    enabled?: boolean;
+    adminPrivateKey?: string;
+  };
 }
 
 // Thought object interface
@@ -52,6 +57,9 @@ export default function createThinkProtocolPlugin(config: ThinkProtocolPluginCon
   // Set default MCP index URL if not provided
   const mcpIndexUrl = config.mcpIndexUrl || 'https://iod.ai';
   
+  // Set default Agent Wallet options
+  const agentWalletEnabled = config.agentWallet?.enabled !== false; // Enabled by default if not specified
+  
   elizaLogger.log("Initializing THINK Protocol Plugin with config:", config);
   
   // Use a lazy loading approach for actions
@@ -73,12 +81,31 @@ export default function createThinkProtocolPlugin(config: ThinkProtocolPluginCon
       runtime.setSetting("THINK_RPC_URL", config.rpcUrl);
       runtime.setSetting("THINK_MCP_INDEX_URL", mcpIndexUrl);
       
+      if (agentWalletEnabled) {
+        runtime.setSetting("AGENT_WALLET_ENABLED", "true");
+        if (config.agentWallet?.adminPrivateKey) {
+          // Store securely if available
+          const vaultService = runtime.getService(ServiceType.VAULT);
+          if (vaultService) {
+            try {
+              await vaultService.set("agent_wallet_admin_key", config.agentWallet.adminPrivateKey);
+              elizaLogger.log("Agent Wallet admin key stored securely in vault");
+            } catch (error) {
+              elizaLogger.error("Failed to store Agent Wallet admin key in vault:", error);
+            }
+          } else {
+            elizaLogger.warn("Vault service not available for Agent Wallet key storage");
+          }
+        }
+      }
+      
       // Register plugin memory spaces
       const memorySpacesToCreate = [
         "think_protocol",
         "transactions",
         "wallets",
-        "mcp_servers"
+        "mcp_servers",
+        "agent_wallets" // Add agent_wallets memory space
       ];
       
       for (const space of memorySpacesToCreate) {
@@ -86,6 +113,23 @@ export default function createThinkProtocolPlugin(config: ThinkProtocolPluginCon
         if (!memoryManager) {
           elizaLogger.log(`Creating memory space: ${space}`);
           await runtime.createMemorySpace(space);
+        }
+      }
+      
+      // Initialize the Lit Agent Wallet if enabled
+      if (agentWalletEnabled) {
+        try {
+          // Check if Lit Protocol's Agent Wallet is available
+          await import('@lit-protocol/agent-wallet');
+          elizaLogger.log("Lit Protocol Agent Wallet is available");
+          
+          // Initialize wallet if admin key is available
+          if (config.agentWallet?.adminPrivateKey) {
+            // We'll do the actual initialization when the AGENT_WALLET action is called
+            elizaLogger.log("Agent Wallet initialization will be performed when needed");
+          }
+        } catch (error) {
+          elizaLogger.warn("Lit Protocol Agent Wallet is not available:", error);
         }
       }
       
@@ -106,13 +150,24 @@ export default function createThinkProtocolPlugin(config: ThinkProtocolPluginCon
           const discoverActionsAction = (await import('./actions/discoverActions')).default;
           const findMcpServerAction = (await import('./actions/find-mcp-server')).default;
           
-          // Register actions
+          // Register standard actions
           actionsMap.set(signTransactionAction.name, signTransactionAction);
           actionsMap.set(createWalletAction.name, createWalletAction);
           actionsMap.set(sendMessageAction.name, sendMessageAction);
           actionsMap.set(registerAgentAction.name, registerAgentAction);
           actionsMap.set(discoverActionsAction.name, discoverActionsAction);
           actionsMap.set(findMcpServerAction.name, findMcpServerAction);
+          
+          // Conditionally load Agent Wallet action if enabled
+          if (agentWalletEnabled) {
+            try {
+              const agentWalletAction = (await import('./actions/agent-wallet-action')).default;
+              actionsMap.set(agentWalletAction.name, agentWalletAction);
+              elizaLogger.log("Agent Wallet action loaded successfully");
+            } catch (error) {
+              elizaLogger.error("Failed to load Agent Wallet action:", error);
+            }
+          }
           
           elizaLogger.log("Successfully loaded THINK Protocol actions:", 
             Array.from(actionsMap.keys()).join(", "));
@@ -175,6 +230,36 @@ export default function createThinkProtocolPlugin(config: ThinkProtocolPluginCon
         } catch (error) {
           elizaLogger.error("Error finding MCP server:", error);
           throw new ThinkProtocolError(`Failed to find MCP server: ${error.message}`);
+        }
+      },
+      
+      // Helper method to interact with the Agent Wallet
+      async executeAgentWalletOperation(operation: string, params: any): Promise<any> {
+        if (!agentWalletEnabled) {
+          throw new ThinkProtocolError("Agent Wallet is not enabled");
+        }
+        
+        try {
+          elizaLogger.log(`Executing Agent Wallet operation: ${operation}`, params);
+          
+          // Dynamically import the Agent Wallet
+          const { Admin, Delegatee } = await import('@lit-protocol/agent-wallet');
+          
+          // This is a simplified direct access - in production would use the action
+          // Implementation varies based on operation type
+          switch (operation) {
+            case 'getStatus':
+              return {
+                status: 'active',
+                capabilities: ['token-transfer', 'message-signing', 'swap']
+              };
+              
+            default:
+              throw new ThinkProtocolError(`Unsupported Agent Wallet operation: ${operation}`);
+          }
+        } catch (error) {
+          elizaLogger.error("Error executing Agent Wallet operation:", error);
+          throw new ThinkProtocolError(`Failed to execute Agent Wallet operation: ${error.message}`);
         }
       }
     },

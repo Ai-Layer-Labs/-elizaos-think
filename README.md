@@ -10,6 +10,7 @@ A plugin that implements the THINK Protocol for agent interoperability, enabling
 - **Action Discovery**: Find and match compatible actions from other agents
 - **Message Sending**: Send secure messages between agents
 - **MCP Server Search**: Find available MCP (Machine Cognition Protocol) servers for specific capabilities
+- **Agent Wallet**: Secure, policy-enforced wallet operations using Lit Protocol's Agent Wallet framework
 
 ## Installation
 
@@ -27,7 +28,11 @@ const thinkPlugin = createPlugin({
   networkId: 'mainnet',
   contractAddress: '0x1234567890abcdef1234567890abcdef12345678',
   rpcUrl: 'https://ethereum.example.com/rpc',
-  mcpIndexUrl: 'https://iod.ai' // Optional, defaults to iod.ai
+  mcpIndexUrl: 'https://iod.ai', // Optional, defaults to iod.ai
+  agentWallet: {                 // Optional Agent Wallet configuration
+    enabled: true,
+    adminPrivateKey: '0x...'     // For admin initialization (store securely!)
+  }
 });
 
 // Register the plugin with ElizaOS
@@ -118,6 +123,136 @@ await runtime.performAction('FIND_MCP_SERVER', {
   prioritizeBy: 'reliability'
 });
 ```
+
+### 7. AGENT_WALLET
+
+Perform secure wallet operations using Lit Protocol's Agent Wallet with tamper-proof policy enforcement.
+
+#### Initialize Wallet
+
+```typescript
+// Initialize as admin
+await runtime.performAction('AGENT_WALLET', {
+  operation: 'INITIALIZE_WALLET',
+  config: {
+    network: 'polygon',
+    role: 'admin',
+    adminPrivateKey: '0x...' // Private key for the admin
+  }
+});
+
+// Initialize as delegatee
+await runtime.performAction('AGENT_WALLET', {
+  operation: 'INITIALIZE_WALLET',
+  config: {
+    network: 'polygon',
+    role: 'delegatee',
+    delegateePrivateKey: '0x...' // Private key for the delegatee
+  }
+});
+```
+
+#### Set Policy
+
+```typescript
+// Set a policy for a tool
+await runtime.performAction('AGENT_WALLET', {
+  operation: 'SET_POLICY',
+  policy: {
+    toolName: 'erc20-transfer',
+    allowedAddresses: ['0x1234...', '0x5678...'],
+    maxDailyAmount: '100',
+    tokenType: ['USDC', 'DAI']
+  }
+});
+```
+
+#### Add Delegatee
+
+```typescript
+// Add a delegatee with permissions
+await runtime.performAction('AGENT_WALLET', {
+  operation: 'ADD_DELEGATEE',
+  delegatee: {
+    address: '0x1234...',
+    permissions: ['erc20-transfer', 'sign-message']
+  }
+});
+```
+
+#### Transfer Token
+
+```typescript
+// Transfer ERC20 tokens
+await runtime.performAction('AGENT_WALLET', {
+  operation: 'TRANSFER_TOKEN',
+  token: {
+    tokenAddress: '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48', // USDC
+    recipient: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
+    amount: '10.5',
+    chainId: 1
+  }
+});
+```
+
+#### Swap Token
+
+```typescript
+// Swap tokens using Uniswap
+await runtime.performAction('AGENT_WALLET', {
+  operation: 'SWAP_TOKEN',
+  token: {
+    tokenAddress: '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48', // USDC
+    outputTokenAddress: '0x6b175474e89094c44da98b954eedeac495271d0f', // DAI
+    amount: '100',
+    chainId: 1
+  }
+});
+```
+
+#### Sign Message
+
+```typescript
+// Sign a message
+await runtime.performAction('AGENT_WALLET', {
+  operation: 'SIGN_MESSAGE',
+  message: {
+    content: 'I authorize this transaction',
+    type: 'plain'
+  }
+});
+```
+
+#### Execute Custom Tool
+
+```typescript
+// Execute a custom tool
+await runtime.performAction('AGENT_WALLET', {
+  operation: 'EXECUTE_TOOL',
+  tool: {
+    name: 'custom-tool-name',
+    params: {
+      param1: 'value1',
+      param2: 'value2'
+    }
+  }
+});
+```
+
+## Agent Wallet Security Features
+
+The Agent Wallet implementation uses Lit Protocol to provide the following security features:
+
+1. **Programmable Key Pairs (PKPs)**: ECDSA keypairs represented as ERC-721 NFTs
+2. **Tamper-Proof Policies**: Cryptographically secured policies define what operations are allowed
+3. **Delegatee Access Control**: Admins can delegate execution rights while maintaining control
+4. **Immutable Execution Environment**: Operations are executed in a secure, verifiable context
+5. **Policy Enforcement**: Policies provide:
+   - Transaction value limits
+   - Token type restrictions
+   - Address allowlists
+   - Rate limiting
+   - Multi-signature requirements
 
 ## Architecture
 
