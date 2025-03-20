@@ -14,6 +14,7 @@ export interface ThinkProtocolPluginConfig {
   networkId: string;
   contractAddress: string; // Address of the on-chain memory contract (e.g., agent NFT contract)
   rpcUrl: string;
+  mcpIndexUrl?: string; // URL for the MCP index service (defaults to iod.ai)
 }
 
 // Thought object interface
@@ -48,6 +49,9 @@ export default function createThinkProtocolPlugin(config: ThinkProtocolPluginCon
     throw new ThinkProtocolError("RPC URL is required");
   }
   
+  // Set default MCP index URL if not provided
+  const mcpIndexUrl = config.mcpIndexUrl || 'https://iod.ai';
+  
   elizaLogger.log("Initializing THINK Protocol Plugin with config:", config);
   
   // Use a lazy loading approach for actions
@@ -67,12 +71,22 @@ export default function createThinkProtocolPlugin(config: ThinkProtocolPluginCon
       runtime.setSetting("THINK_CONTRACT_ADDRESS", config.contractAddress);
       runtime.setSetting("THINK_NETWORK_ID", config.networkId);
       runtime.setSetting("THINK_RPC_URL", config.rpcUrl);
+      runtime.setSetting("THINK_MCP_INDEX_URL", mcpIndexUrl);
       
-      // Register plugin memory space
-      const memoryManager = runtime.getMemoryManager("think_protocol");
-      if (!memoryManager) {
-        elizaLogger.warn("Memory manager not available, creating memory space");
-        await runtime.createMemorySpace("think_protocol");
+      // Register plugin memory spaces
+      const memorySpacesToCreate = [
+        "think_protocol",
+        "transactions",
+        "wallets",
+        "mcp_servers"
+      ];
+      
+      for (const space of memorySpacesToCreate) {
+        const memoryManager = runtime.getMemoryManager(space);
+        if (!memoryManager) {
+          elizaLogger.log(`Creating memory space: ${space}`);
+          await runtime.createMemorySpace(space);
+        }
       }
       
       return true;
@@ -90,6 +104,7 @@ export default function createThinkProtocolPlugin(config: ThinkProtocolPluginCon
           const sendMessageAction = (await import('./actions/send-message-action')).default;
           const registerAgentAction = (await import('./actions/registerAgent')).default;
           const discoverActionsAction = (await import('./actions/discoverActions')).default;
+          const findMcpServerAction = (await import('./actions/find-mcp-server')).default;
           
           // Register actions
           actionsMap.set(signTransactionAction.name, signTransactionAction);
@@ -97,6 +112,7 @@ export default function createThinkProtocolPlugin(config: ThinkProtocolPluginCon
           actionsMap.set(sendMessageAction.name, sendMessageAction);
           actionsMap.set(registerAgentAction.name, registerAgentAction);
           actionsMap.set(discoverActionsAction.name, discoverActionsAction);
+          actionsMap.set(findMcpServerAction.name, findMcpServerAction);
           
           elizaLogger.log("Successfully loaded THINK Protocol actions:", 
             Array.from(actionsMap.keys()).join(", "));
@@ -130,6 +146,35 @@ export default function createThinkProtocolPlugin(config: ThinkProtocolPluginCon
         } catch (error) {
           elizaLogger.error("Error signing message:", error);
           throw new ThinkProtocolError("Failed to sign message: " + error.message);
+        }
+      },
+      
+      // Helper method to search for MCP servers
+      async findMcpServer(capability: string, options?: any): Promise<any> {
+        try {
+          // We're implementing this directly to avoid circular dependencies
+          // In a real implementation, we would fetch this from the MCP index
+          elizaLogger.log(`Looking up MCP server for capability: ${capability}`, options);
+          
+          // This is a simplified version - the actual action provides more functionality
+          const mockResponse = {
+            capability,
+            servers: [
+              {
+                id: `${capability}-server-1`,
+                name: `${capability.charAt(0).toUpperCase() + capability.slice(1)} Service`,
+                url: `https://api.example.com/${capability}`,
+                capabilities: [capability],
+                version: 'v1.0',
+                reliability: 0.95,
+              }
+            ]
+          };
+          
+          return mockResponse;
+        } catch (error) {
+          elizaLogger.error("Error finding MCP server:", error);
+          throw new ThinkProtocolError(`Failed to find MCP server: ${error.message}`);
         }
       }
     },
